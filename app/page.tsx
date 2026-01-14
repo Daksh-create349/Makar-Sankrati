@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Hero from '../src/components/Hero';
 import InfoSection from '../src/components/InfoSection';
@@ -15,15 +15,19 @@ import 'lenis/dist/lenis.css';
 export default function Home() {
     const lenisRef = useRef<Lenis | null>(null);
 
+    // Day/Night Cycle State
+    const [phase, setPhase] = useState<'night' | 'dawn' | 'day' | 'dusk'>('day');
+    const [isNight, setIsNight] = useState(false);
+
     useEffect(() => {
         // Buttery Smooth Scroll Settings
         const lenis = new Lenis({
-            duration: 3.0, // Extremely smooth, floaty feel
-            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // Exponential easing
+            duration: 3.0,
+            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
             orientation: 'vertical',
             gestureOrientation: 'vertical',
             smoothWheel: true,
-            wheelMultiplier: 0.6, // Slower scrolling for "heavy" cinematic feel
+            wheelMultiplier: 0.6,
             touchMultiplier: 1.5,
         });
 
@@ -41,13 +45,53 @@ export default function Home() {
         };
     }, []);
 
+    // Cycle Timer
+    useEffect(() => {
+        const cycleDuration = 30000; // 30 seconds full cycle
+        const startTime = Date.now();
+
+        const updatePhase = () => {
+            const elapsed = (Date.now() - startTime) % cycleDuration;
+            const progress = elapsed / cycleDuration;
+
+            // 0.0 - 0.20: Night
+            // 0.20 - 0.35: Dawn
+            // 0.35 - 0.65: Day
+            // 0.65 - 0.80: Dusk
+            // 0.80 - 1.00: Night
+
+            let currentPhase: 'night' | 'dawn' | 'day' | 'dusk' = 'night';
+            if (progress < 0.20) currentPhase = 'night';
+            else if (progress < 0.35) currentPhase = 'dawn';
+            else if (progress < 0.65) currentPhase = 'day';
+            else if (progress < 0.80) currentPhase = 'dusk';
+            else currentPhase = 'night';
+
+            setPhase(currentPhase);
+            setIsNight(currentPhase === 'night');
+        };
+
+        const interval = setInterval(updatePhase, 100);
+        return () => clearInterval(interval);
+    }, []);
+
+    const getBackground = (p: string) => {
+        switch (p) {
+            case 'night': return 'linear-gradient(to bottom, #020617, #1e1b4b, #312e81)'; // Deep dark purple/blue
+            case 'dawn': return 'linear-gradient(to bottom, #1e3a8a, #c2410c, #f97316)'; // Sunrise orange
+            case 'day': return 'linear-gradient(to bottom, #2563eb, #3b82f6, #fcd34d)'; // Bright Day
+            case 'dusk': return 'linear-gradient(to bottom, #1e3a8a, #be185d, #f59e0b)'; // Sunset pink/purple
+            default: return 'linear-gradient(to bottom, #0f172a, #1e3a8a, #d97706)';
+        }
+    };
+
     return (
         <div className="app-container" style={{ position: 'relative', minHeight: '100vh' }}>
             <CustomCursor />
             <Particles />
             <MusicPlayer />
 
-            {/* Global Consistent Theme Background - Fixed */}
+            {/* Global Theme Background */}
             <motion.div
                 style={{
                     position: 'fixed',
@@ -58,17 +102,10 @@ export default function Home() {
                     zIndex: 0,
                     pointerEvents: 'none'
                 }}
-                // Using a "Rich Golden Hour" theme that is grand but not blindingly bright
-                initial={{ background: 'linear-gradient(to bottom, #0f172a, #1e3a8a, #d97706)' }}
                 animate={{
-                    background: [
-                        'linear-gradient(to bottom, #0f172a, #1e3a8a, #b45309)', // Early Morning / Late Evening (Darker)
-                        'linear-gradient(to bottom, #1e3a8a, #2563eb, #d97706)', // Golden Hour
-                        'linear-gradient(to bottom, #1e40af, #3b82f6, #f59e0b)', // Bright but deep Day
-                        'linear-gradient(to bottom, #172554, #1e3a8a, #b45309)'  // Return to Evening
-                    ]
+                    background: getBackground(phase)
                 }}
-                transition={{ duration: 20, repeat: Infinity, repeatType: 'reverse', ease: "easeInOut" }}
+                transition={{ duration: 5, ease: "easeInOut" }}
             >
                 {/* Global Grain Overlay */}
                 <div style={{
@@ -77,14 +114,28 @@ export default function Home() {
                     opacity: 0.15,
                     background: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'0 0 2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.65\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")',
                 }} />
+
+                {/* Stars for Night Mode */}
+                <motion.div
+                    animate={{ opacity: isNight ? 1 : 0 }}
+                    transition={{ duration: 3 }}
+                    style={{
+                        position: 'absolute',
+                        inset: 0,
+                        backgroundImage: 'radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 3px), radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 2px)',
+                        backgroundSize: '550px 550px, 350px 350px',
+                        backgroundPosition: '0 0, 40px 60px',
+                        zIndex: -1
+                    }}
+                />
             </motion.div>
 
             {/* Scrollable Content */}
             <div style={{ position: 'relative', zIndex: 1 }}>
-                <Hero />
+                <Hero isNight={isNight} />
                 <InfoSection />
                 <FestivalMap />
-                <WishGenerator />
+                <WishGenerator isNight={isNight} />
 
                 {/* Closing Greetings */}
                 <motion.div
@@ -110,7 +161,9 @@ export default function Home() {
                             fontSize: 'clamp(3rem, 8vw, 6rem)',
                             fontWeight: 900,
                             margin: 0,
-                            background: 'linear-gradient(to right, #fcd34d, #f59e0b, #d97706)',
+                            background: isNight
+                                ? 'linear-gradient(to right, #fcd34d, #f59e0b, #d97706)' // Gold still looks good at night
+                                : 'linear-gradient(to right, #fcd34d, #f59e0b, #d97706)',
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
                             filter: 'drop-shadow(0 0 20px rgba(245, 158, 11, 0.5))',
@@ -139,12 +192,13 @@ export default function Home() {
 
                 {/* Footer */}
                 <footer style={{
-                    background: 'rgba(255, 255, 255, 0.1)', // Glassy light footer for day theme
+                    background: 'rgba(255, 255, 255, 0.1)',
                     backdropFilter: 'blur(10px)',
-                    color: '#1e3a8a', // Dark blue text for contrast
+                    color: isNight ? '#93c5fd' : '#1e3a8a',
                     textAlign: 'center',
                     padding: '40px',
-                    borderTop: '1px solid rgba(255,255,255,0.2)'
+                    borderTop: '1px solid rgba(255,255,255,0.2)',
+                    transition: 'color 3s'
                 }}>
                     <p>© 2026 Makar Sankranti Special. Made with ❤️ and Kites.</p>
                 </footer>
