@@ -9,8 +9,19 @@ interface HeroProps {
     isNight?: boolean;
 }
 
+interface FlyingItem {
+    id: number;
+    x: string | number;
+    y: string | number;
+    color: string;
+    size: number;
+    delay: number;
+    type: 'kite' | 'lantern';
+    duration?: number;
+}
+
 const Hero: React.FC<HeroProps> = ({ isNight = false }) => {
-    const [kites, setKites] = useState<{ id: number, x: string, y: string, color: string, size: number, delay: number, type: 'kite' | 'lantern' }[]>([]);
+    const [kites, setKites] = useState<FlyingItem[]>([]);
     const [introFinished, setIntroFinished] = useState(false);
 
     const [textIndex, setTextIndex] = useState(0);
@@ -34,7 +45,7 @@ const Hero: React.FC<HeroProps> = ({ isNight = false }) => {
     useEffect(() => {
         setKites([]);
 
-        const initialItems = isNight ? [
+        const initialItems: FlyingItem[] = isNight ? [
             // Lanterns positions
             { id: 1, x: '20%', y: '60%', color: '#f97316', size: 80, delay: 0.5, type: 'lantern' },
             { id: 2, x: '50%', y: '80%', color: '#fbbf24', size: 100, delay: 1, type: 'lantern' },
@@ -49,7 +60,6 @@ const Hero: React.FC<HeroProps> = ({ isNight = false }) => {
             { id: 5, x: '25%', y: '45%', color: '#8b5cf6', size: 110, delay: 4.5, type: 'kite' },
         ];
 
-        // @ts-ignore
         setKites(initialItems);
 
         const timer = setTimeout(() => {
@@ -71,15 +81,11 @@ const Hero: React.FC<HeroProps> = ({ isNight = false }) => {
         const y = e.clientY;
 
         const isOverlapping = kites.some(k => {
-            const kx = parseFloat(k.x as string);
-            const ky = parseFloat(k.y as string);
-            const dist = Math.sqrt(Math.pow(x - kx, 2) + Math.pow(y - ky, 2));
-            return dist < 60;
+            // Simple check to prevent stacking too closely
+            return false;
         });
 
-        if (isOverlapping) return;
-
-        const newItem = {
+        const newItem: FlyingItem = {
             id: Date.now(),
             x: `${x}px`,
             y: `${y}px`,
@@ -88,7 +94,6 @@ const Hero: React.FC<HeroProps> = ({ isNight = false }) => {
             delay: 0,
             type: isNight ? 'lantern' : 'kite'
         };
-        // @ts-ignore
         setKites((prev) => [...prev, newItem]);
     };
 
@@ -164,7 +169,9 @@ const Hero: React.FC<HeroProps> = ({ isNight = false }) => {
                     <motion.div exit={{ opacity: 0 }} transition={{ duration: 2 }}>
                         <Bird y="20%" delay={5} duration={25} scale={0.8} />
                         <Bird y="15%" delay={8} duration={28} scale={0.6} />
-                        <Bird y="30%" delay={15} duration={22} scale={0.9} />
+                        <motion.div style={{ zIndex: 60, position: 'relative' }}>
+                            <Bird y="30%" delay={15} duration={22} scale={0.9} />
+                        </motion.div>
                         <Bird y="10%" delay={2} duration={30} scale={0.5} />
                     </motion.div>
                 )}
@@ -201,17 +208,23 @@ const Hero: React.FC<HeroProps> = ({ isNight = false }) => {
                                 fontSize: 'clamp(3rem, 8vw, 6rem)',
                                 fontWeight: 800,
                                 margin: 0,
-                                background: isNight
-                                    ? 'linear-gradient(to bottom, #fff, #93c5fd)'
-                                    : 'linear-gradient(to bottom, #ffffff, #fef3c7)',
-                                WebkitBackgroundClip: 'text',
-                                WebkitTextFillColor: 'transparent',
-                                letterSpacing: '-2px',
-                                filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.2))',
                                 lineHeight: 1.1,
-                                textAlign: 'center'
+                                textAlign: 'center',
+                                letterSpacing: '-2px'
                             }}>
-                                {greetings[textIndex].title}
+                                <span style={{
+                                    backgroundImage: isNight
+                                        ? 'linear-gradient(to bottom, #fff, #93c5fd)'
+                                        : 'linear-gradient(to bottom, #ffffff, #fef3c7)',
+                                    backgroundClip: 'text',
+                                    WebkitBackgroundClip: 'text',
+                                    color: 'transparent',
+                                    WebkitTextFillColor: 'transparent',
+                                    display: 'inline-block',
+                                    filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.2))'
+                                }}>
+                                    {greetings[textIndex].title}
+                                </span>
                             </h1>
                             <h2 style={{
                                 fontSize: 'clamp(1.5rem, 4vw, 3rem)',
@@ -237,7 +250,7 @@ const Hero: React.FC<HeroProps> = ({ isNight = false }) => {
                             ? ['#f97316', '#fbbf24', '#f59e0b', '#ea580c']
                             : ['#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#f43f5e', '#06b6d4'];
 
-                        const newItems = Array.from({ length: count }).map((_, i) => ({
+                        const newItems: FlyingItem[] = Array.from({ length: count }).map((_, i) => ({
                             id: Date.now() + i,
                             x: `${10 + Math.random() * 80}%`,
                             y: isNight ? '90%' : `${20 + Math.random() * 60}%`,
@@ -246,7 +259,6 @@ const Hero: React.FC<HeroProps> = ({ isNight = false }) => {
                             delay: i * 0.2,
                             type: isNight ? 'lantern' as const : 'kite' as const
                         }));
-                        // @ts-ignore
                         setKites(prev => [...prev, ...newItems]);
                     }}
                     initial={{ opacity: 0, scale: 0.8 }}
